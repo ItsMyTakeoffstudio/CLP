@@ -914,6 +914,7 @@
   }
   .review-name { font-size: 13px; font-weight: 800; color: var(--text-dark); }
   .review-date { font-size: 10px; color: var(--text-light); font-weight: 600; }
+  setInterval(renderReviews, 5000);
 
   /* ── ADD REVIEW FORM ── */
   .add-review-section {
@@ -1541,23 +1542,29 @@ async function allReviews() {
   const firebaseReviews = await fetchReviewsFromFirebase();
   return [...SEED_REVIEWS, ...firebaseReviews];
 }
-function renderReviews() {
-  const scroll = document.getElementById('reviewsScroll');
-  scroll.innerHTML = allReviews().map(r => `
-    <div class="review-card">
-      <div class="review-stars">${'⭐'.repeat(r.stars)}</div>
-      <div class="review-text">"${r.text}"</div>
-      <div class="review-author">
-        <div class="review-avatar">${r.name[0].toUpperCase()}</div>
-        <div>
-          <div class="review-name">${r.name}</div>
-          <div class="review-date">${r.date}</div>
+async function renderReviews() {
+  const container = document.getElementById('reviewsScroll');
+  container.innerHTML = '';
+
+  const firebaseReviews = await fetchReviewsFromFirebase();
+  const reviews = [...SEED_REVIEWS, ...firebaseReviews];
+
+  reviews.forEach(r => {
+    container.innerHTML += `
+      <div class="review-card">
+        <div class="review-stars">${'⭐'.repeat(r.stars)}</div>
+        <div class="review-text">${r.text}</div>
+        <div class="review-author">
+          <div class="review-avatar">${r.name[0]}</div>
+          <div>
+            <div class="review-name">${r.name}</div>
+            <div class="review-date">${r.date}</div>
+          </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  });
 }
-
 function openReviewForm() {
   document.getElementById('reviewFormOverlay').classList.add('open');
   document.getElementById('reviewFormDrawer').classList.add('open');
@@ -1890,10 +1897,17 @@ function doLogin() {
     document.getElementById('loginErr').style.display = 'block';
   }
 }
-
+async function fetchReviewsFromFirebase() {
+  try {
+    const res = await fetch(`${FIREBASE_DB}/reviews.json`);
+    const data = await res.json();
+    return data ? Object.values(data) : [];
+  } catch (e) {
+    return [];
+  }
+}
 document.getElementById('adminPass').addEventListener('keypress', e => { if (e.key==='Enter') doLogin(); });
-
-function openAdminPanel() {
+  function openAdminPanel() {
   document.getElementById('adminPanel').classList.add('open');
   startAdminSync(); // fetches from Firebase, polls every 5s
 }
