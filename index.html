@@ -1345,8 +1345,8 @@ const MENU = [
 //  2. New Project → Realtime Database → Start in TEST MODE
 //  3. Copy your database URL and paste below
 // ══════════════════════════════════════
-const FIREBASE_DB = 'https://chailijepragathinagar-default-rtdb.asia-southeast1.firebasedatabase.app/';
-// Example: 'https://chai-lije-rtdb.firebaseio.com'
+const FIREBASE_DB = "https://clpnagar-default-rtdb.asia-southeast1.firebasedatabase.app/";
+  // Example: 'https://chai-lije-rtdb.firebaseio.com'
 const FB_READY = typeof FIREBASE_DB === 'string'
   && FIREBASE_DB.startsWith('https://')
   && FIREBASE_DB.includes('firebaseio.com');
@@ -2035,3 +2035,19 @@ updateCartUI();
 </script>
 </body>
 </html>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+const FIREBASE_DB = "https://clpnagar-default-rtdb.asia-southeast1.firebasedatabase.app/";
+
+    firebase.initializeApp({
+      databaseURL: FIREBASE_DB
+    });
+
+    const db = firebase.database();
+
+    console.log("Firebase connected");
+
+  </script>
+
+</body>
+  
