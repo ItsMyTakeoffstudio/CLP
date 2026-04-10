@@ -1582,17 +1582,6 @@ function setStars(n) {
 // Init stars display
 setStars(5);
 
-function submitReview() {
-  const name = document.getElementById('reviewName').value.trim();
-  const text = document.getElementById('reviewText').value.trim();
-  if (!name) { showToast('Please enter your name'); return; }
-  if (!text || text.length < 10) { showToast('Write a little more about your experience'); return; }
-  const review = {
-    name,
-    stars: selectedStars,
-    text,
-    date: new Date().toLocaleDateString('en-IN', { month:'short', year:'numeric' }),
-  };
 async function submitReview() {
   const name = document.getElementById('reviewName').value.trim();
   const text = document.getElementById('reviewText').value.trim();
@@ -1611,81 +1600,71 @@ async function submitReview() {
     ts: Date.now()
   };
 
-  // 🔥 Save to Firebase
+  // ✅ ALWAYS save locally (backup)
+  let localReviews = JSON.parse(localStorage.getItem('cl_reviews') || '[]');
+  localReviews.push(review);
+  localStorage.setItem('cl_reviews', JSON.stringify(localReviews));
+
+  // ✅ TRY Firebase
   try {
-    await fetch(`${FIREBASE_DB}/reviews/${review.id}.json`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(review)
-    });
+    if (FB_READY) {
+      await fetch(`${FIREBASE_DB}/reviews/${review.id}.json`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(review)
+      });
+    }
   } catch (e) {
-    console.log("Firebase error", e);
+    console.log("Firebase failed, saved locally");
   }
 
   closeReviewForm();
+  renderReviews(); // 🔥 IMPORTANT
   showToast("Review submitted ☕");
 }
  async function fetchReviewsFromFirebase() {
   try {
+    if (!FB_READY) return [];
+
     const res = await fetch(`${FIREBASE_DB}/reviews.json`);
     const data = await res.json();
 
-    if (!data) return [];
-
-    return Object.values(data);
+    return data ? Object.values(data) : [];
   } catch (e) {
     return [];
   }
 }
-  renderReviews();
-  closeReviewForm();
-  document.getElementById('reviewName').value = '';
-  document.getElementById('reviewText').value = '';
-  setStars(5);
-  showToast('Thank you for your review! ☕');
-}
-
 // ══════════════════════════════════════
 //  RENDER MENU
 // ══════════════════════════════════════
-function renderMenu() {
-  const nav = document.getElementById('catNav');
-  const section = document.getElementById('menuSection');
-  nav.innerHTML = '';
-  section.innerHTML = '';
+async function renderReviews() {
+  const container = document.getElementById('reviewsScroll');
+  container.innerHTML = '';
 
-  MENU.forEach(cat => {
-    // Nav pill
-    const pill = document.createElement('button');
-    pill.className = 'cat-pill';
-    pill.textContent = cat.emoji + ' ' + cat.name;
-    pill.onclick = () => {
-      document.getElementById('cat-' + cat.id).scrollIntoView({ behavior: 'smooth', block: 'start' });
-    };
-    nav.appendChild(pill);
+  // ✅ Firebase reviews
+  const firebaseReviews = await fetchReviewsFromFirebase();
 
-    // Category block
-    const block = document.createElement('div');
-    block.className = 'category-block';
-    block.id = 'cat-' + cat.id;
+  // ✅ Local backup reviews
+  const localReviews = JSON.parse(localStorage.getItem('cl_reviews') || '[]');
 
-    const header = document.createElement('div');
-    header.className = 'cat-header';
-    header.innerHTML = `<span class="cat-header-emoji">${cat.emoji}</span><span class="cat-header-name">${cat.name}</span>`;
-    block.appendChild(header);
+  const reviews = [...SEED_REVIEWS, ...firebaseReviews, ...localReviews];
 
-    const itemsDiv = document.createElement('div');
-    itemsDiv.className = 'cat-items';
-
-    cat.items.forEach(item => {
-      itemsDiv.appendChild(buildItemRow(item));
-    });
-
-    block.appendChild(itemsDiv);
-    section.appendChild(block);
+  reviews.forEach(r => {
+    container.innerHTML += `
+      <div class="review-card">
+        <div class="review-stars">${'⭐'.repeat(r.stars)}</div>
+        <div class="review-text">${r.text}</div>
+        <div class="review-author">
+          <div class="review-avatar">${r.name[0]}</div>
+          <div>
+            <div class="review-name">${r.name}</div>
+            <div class="review-date">${r.date}</div>
+          </div>
+        </div>
+      </div>
+    `;
   });
 }
-
 function buildItemRow(item) {
   const avail = isAvailable(item.id);
   const qty = cart[item.id] || 0;
