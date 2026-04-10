@@ -1537,10 +1537,10 @@ const SEED_REVIEWS = [
 let userReviews = JSON.parse(localStorage.getItem('cl_reviews') || '[]');
 let selectedStars = 5;
 
-function allReviews() {
-  return [...SEED_REVIEWS, ...userReviews];
+async function allReviews() {
+  const firebaseReviews = await fetchReviewsFromFirebase();
+  return [...SEED_REVIEWS, ...firebaseReviews];
 }
-
 function renderReviews() {
   const scroll = document.getElementById('reviewsScroll');
   scroll.innerHTML = allReviews().map(r => `
@@ -1586,8 +1586,50 @@ function submitReview() {
     text,
     date: new Date().toLocaleDateString('en-IN', { month:'short', year:'numeric' }),
   };
-  userReviews.unshift(review);
-  localStorage.setItem('cl_reviews', JSON.stringify(userReviews));
+async function submitReview() {
+  const name = document.getElementById('reviewName').value.trim();
+  const text = document.getElementById('reviewText').value.trim();
+
+  if (!name || !text) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  const review = {
+    id: "RV" + Date.now(),
+    name,
+    text,
+    stars: selectedStars,
+    date: new Date().toLocaleDateString(),
+    ts: Date.now()
+  };
+
+  // 🔥 Save to Firebase
+  try {
+    await fetch(`${FIREBASE_DB}/reviews/${review.id}.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(review)
+    });
+  } catch (e) {
+    console.log("Firebase error", e);
+  }
+
+  closeReviewForm();
+  showToast("Review submitted ☕");
+}
+ async function fetchReviewsFromFirebase() {
+  try {
+    const res = await fetch(`${FIREBASE_DB}/reviews.json`);
+    const data = await res.json();
+
+    if (!data) return [];
+
+    return Object.values(data);
+  } catch (e) {
+    return [];
+  }
+}
   renderReviews();
   closeReviewForm();
   document.getElementById('reviewName').value = '';
